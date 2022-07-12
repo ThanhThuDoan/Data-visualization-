@@ -1,0 +1,729 @@
+---
+title: "Final Examination - Machine Learning Model"
+author: 
+  - "Nguyễn Lương Liệu"   
+  - "Nguyễn Khánh Ly"   
+  - "Vũ Thị Ngọc"   
+  - "Đoàn Thị Thanh Thư"    
+  - "Đinh Thị Quỳnh Trang"    
+
+date: "Tháng 6, 2022"
+output:
+  rmdformats::readthedown:
+    self_contained: yes
+  
+header-includes:
+- \usepackage{tikz}
+- \usepackage{pgfplots}
+- \usetikzlibrary{arrows,automata,positioning}
+- \usepackage[utf8]{inputenc}
+- \usepackage[utf8]{vietnam}
+- \usepackage{etoolbox}
+- \usepackage{xcolor}
+- \makeatletter
+- \preto{\@verbatim}{\topsep=0pt \partopsep=-0pt}
+- \makeatother
+- \DeclareMathOperator*{\argmax}{arg\,max}
+- \newcommand\tstrut{\rule{0pt}{3ex}}
+- \newcommand\bstrut{\rule[-2.5ex]{0pt}{0pt}}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(validate)
+library(gridExtra)
+library(DT)
+library(caret)
+library(tree)
+library(gbm)
+library(MASS)
+library(Metrics)
+library(gam)
+library(gbm)
+library(randomForest)
+library(xgboost)
+
+data <- read_csv("E:/Midterm/DSEB 3/insurance data.csv")
+test.final <- read_csv("E:/Midterm/DSEB 3/test.csv")
+```
+
+------------------------------------------------------------------------
+
+# Mục tiêu của bài báo cáo
+
+<div align="justify">
+
+-   Hiểu và được các thuật toán xây dựng mô hình trong Machine learning
+
+-   Xây dựng mô hình có khả năng dự báo tốt nhất
+
+------------------------------------------------------------------------
+
+# 1. Tổng quan lý thuyết
+
+## 1.1. Trực quan hóa dữ liệu (Data visualization)
+
+<div align = "justify">
+
+Trực quan hóa dữ liệu là cách chuyển đổi thông tin thành bối cảnh trực quan, chẳng hạn như bản đồ hoặc đồ thị, để làm cho dữ liệu dễ dàng hơn cho bộ não con người hiểu và rút ra những ý nghĩa từ đó. Mục tiêu chính của trực quan hóa dữ liệu là giúp dễ dàng xác định các cấu trúc, xu thế và các giá trị ngoại lai trong các bộ dữ liệu lớn. Thuật ngữ này thường được sử dụng để chỉ chung cho những thuật ngữ khác, bao gồm đồ họa thông tin (information graphics), trực quan hóa thông tin (information visualization) và đồ họa thống kê (statistical graphics). (Kate, 2020)
+
+## 1.2. Học máy (Machine learning)
+
+<div align = "justify">
+
+Machine learning (ML) hay học máy là một nhánh của trí tuệ nhân tạo (AI), nó là một lĩnh vực nghiên cứu cho phép máy tính có khả năng cải thiện chính bản thân chúng dựa trên dữ liệu mẫu (training data) hoặc dựa vào kinh nghiệm (những gì đã được học). Machine learning có thể tự dự đoán hoặc đưa ra quyết định mà không cần được lập trình cụ thể.
+
+Bài toán machine learning thường được chia làm hai loại là dự đoán (prediction) và phân loại (classification). Các bài toán dự đoán như dự đoán giá nhà, giá xe... Các bài toán phân loại như nhận diện chữ viết tay, nhận diện đồ vật...
+
+## 1.3. Một số phương pháp xây dựng mô hình trong Machine learning
+
+### 1.3.1. Hồi quy tuyến tính (Linear regression)
+
+<div align="justify">
+
+Hồi quy tuyến tính có thể được coi là một thuật toán trong Machine learning dành cho các bài toán hồi quy. Nó là một phương pháp phân tích quan hệ giữa một biến phụ thuộc với một hay nhiều biến độc lập, trong đó giả định rằng mối quan hệ của các biến là một hàm tuyến tính.
+
+$$
+f(X) = \beta_0 + \beta_1X_1 + \beta_2X_2 + ... + \beta_pX_p
+$$
+
+Những vấn đề tiềm ẩn của hồi quy tuyến tính:
+
+-   Tính phi tuyến tính của các mối quan hệ giữa các biến
+
+-   Tính tương quan của các sai số
+
+-   Phương sai sai số thay đổi
+
+-   Những giá trị ngoại lại (Outliers)
+
+-   Tính đa cộng tuyến
+
+### 1.3.2. Mô hình cộng tổng quát - GAM (Generalized additive models)
+
+<div align = "justify">
+
+Mô hình tuyến tính tổng quát là một dạng mở rộng của mô hình tuyến tính tiêu chuẩn. Nếu trong mô hình tuyến tính các biến độc lập có dạng đơn thức thì ở trong GAM, mỗi biến độc lập là một hàm tuyến tính hoặc phi tuyến.
+
+$$
+Y_i = \beta_0 + f_1(X_{i1}) + f_2(X_{i2}) + ... + f_P(X_{ip}) + \varepsilon_i 
+$$
+
+trong đó $f_j$ có thể là hằng số, đa thức, natural splines hoặc smoothing splines,...
+
+Ưu điểm của GAM:
+
+-   Cho phép tự động điều chỉnh một hàm phi tuyến $f_j$ cho từng $X_j$ mà không cần phải thử thủ công nhiều phép biến đổi khác nhau trên từng biến riêng lẻ.
+
+-   Hàm phi tuyến $f_j$ có thể đưa ra các dự đoán chính xác hơn
+
+-   Có thể kiểm tra ảnh hưởng của từng $X_j$ đến $Y$ một cách độc lập. Nếu dùng cho mục đích giải thích, GAM cung cấp một trình bày hữu ích
+
+Nhược điểm của GAM: Hạn chế chính của GAM là mô hình bị giới hạn ở tính chất cộng. Với nhiều biến số, các tương tác quan trọng có thể bị bỏ sót
+
+### 1.3.3. Mô hình cây quyết định (Decision tree)
+
+<div align = "justify">
+
+Trong Machine learning, mô hình cây quyết định là một kiểu mô hình dự báo, nghĩa là một ánh xạ từ các quan sát về một sự vật/hiện tượng tới các kết luận về giá trị mục tiêu của sự vật/hiện tượng. Mỗi một nút trong (internal node) tương ứng với một biến; đường nối giữa nó với nút con của nó thể hiện một giá trị cụ thể cho biến đó. Mỗi nút lá đại diện cho giá trị dự đoán của biến mục tiêu, cho trước các giá trị của các biến được biểu diễn bởi đường đi từ nút gốc tới nút lá đó.
+
+Ưu điểm:
+
+-   Mô hình cây quyết định phản ánh chính xác hơn quá trình ra quyết định của con người so với các cách tiếp cận khác
+
+-   Mô hình cây quyết định có thể được hiển thị bằng đồ thị và dễ dàng giải thích cho mọi người
+
+-   Mô hình cây quyết định có thể dễ dàng xử lý các yếu tố dự báo định tính
+
+-   Cây quyết định có thể xử lý tốt một lượng dữ liệu lớn trong thời gian ngắn
+
+Nhược điểm:
+
+-   Mô hình cây phụ thuộc rất lớn vào dữ liệu của bạn, một thay đổi nhỏ trong dữ liệu có thể gây ra sự thay đổi lớn trong cây ước tính cuối cùng (phương sai cao)
+
+-   Cây quyết định hay gặp vấn đề overfitting
+
+-   Mô hình cây nói chung không có cùng mức độ dự đoán chính xác như các phương pháp khác
+
+## 1.4. Phương pháp Ensemble Learning
+
+<div align = "justify">
+
+Trong machine learning tồn tại định lý "không có bữa trưa nào miễn phí" *(No free lunch theorem)*, tức là không tồn tại một thuật toán mà luôn tốt cho mọi ứng dụng và mọi tập dữ liệu, vì các thuật toán machine learning thường dựa trên một tập các tham số *(hyperparameters)* hoặc một giả thiết nhất định nào đó về phân bố dữ liệu. Vì vậy để tìm được những thuật toán phù hợp cho tập dữ liệu của mình có thể các bạn sẽ cần nhiều thời gian để test các thuật toán khác nhau. Rồi từ đó thực hiện hiệu chỉnh các tham số *(tuning hyperparameters)* của thuật toán để thu được độ chính xác cao nhất. (Cuong, 2020)
+
+Một cách khác có thể sử dụng để tăng độ chính xác trên tập dataset của bạn là kết hợp *(combine)* một số mô hình với nhau. Phương pháp này gọi là esemble learning. Ý tưởng của việc kết hợp các mô hình khác nhau xuất phát từ một suy nghĩ hợp lý là: các mô hình khác nhau có khả năng khác nhau, có thể thực hiện tốt nhất các loại công việc khác nhau *(subtasks)*, khi kết hợp các mô hình này với nhau một cách hợp lý thì sẽ tạo thành một mô hình kết hợp *(combined model)* mạnh có khả năng cải thiện hiệu suất tổng thể *(overall performance)* so với việc chỉ dùng các mô hình một cách đơn lẻ. (Cuong, 2020)
+
+Có 3 kĩ thuật của ensemble learning được dùng phổ biến hiện nay: (Hoàng, 2020; Cuong, 2020; VTI, 2020)
+
+-   **Bagging**
+
+Xây dựng một lượng lớn các mô hình (thường là cùng loại) trên những tập con mẫu *(subsamples)* khác nhau từ tập huấn luyện mô hình *(training dataset)* một cách song song nhằm đưa ra dự đoán tốt hơn. (Cuong, 2020)
+
+Những mô hình này sẽ được huấn luyện một cách độc lập và song song với nhau nhưng đầu ra của chúng sẽ được trung bình cộng để cho ra kết quả cuối cùng. (Hoàng, 2020)
+
+-   **Boosting**
+
+Xây dựng một lượng lớn các mô hình (thường là cùng loại). Tuy nhiên quá trình huấn luyện trong phương pháp này diễn ra tuần tự theo chuỗi *(sequence)*. Trong chuỗi này mỗi mô hình sau sẽ học cách sửa những lỗi *(errors)* của mô hình trước (hay nói cách khác là dữ liệu mà mô hình trước dự đoán sai). (Cuong, 2020)
+
+Chúng ta sẽ lấy kết quả của mô hình cuối cùng trong chuỗi mô hình này làm kết quả trả về (vì mô hình sau sẽ tốt hơn mô hình trước nên tương tự kết quả sau cũng sẽ tốt hơn kết quả trước). (Hoàng, 2020)
+
+-   **Stacking**
+
+Xây dựng một số mô hình (thường là khác loại) và một mô hình meta *(supervisor model)*, huấn luyện những mô hình này độc lập, sau đó mô hình meta sẽ học cách kết hợp kết quả dự báo của một số mô hình một cách tốt nhất. (Hoàng, 2020)
+
+## 1.5. Boostrapping và Ensemple sampling
+
+### 1.5.1. Boostrapping
+
+<div align = "justify">
+
+**Bootstrapping** là một phương pháp suy ra kết quả cho tổng thể từ các kết quả được tìm thấy trên một tập hợp các mẫu ngẫu nhiên nhỏ hơn của tổng thể đó, sử dụng replacement trong quá trình lấy mẫu. (2U, Inc., 2022)
+
+Replacement có nghĩa là mỗi khi một phần tử được rút ra để tạo mẫu, phần tử đó vẫn sẽ được rút ra trong lần lấy mẫu tiếp theo. Quy tắc này tiếp tục áp dụng cho tất cả các mẫu tiếp theo. Nếu bạn đã loại bỏ hoàn toàn mẫu đầu tiên khỏi tổng thể lấy mẫu mà không đặt nó trở lại mà sau đó đã tạo mẫu thứ hai, các phần tử được rút ra trong mẫu đó sẽ không xảy ra như các phần tử trong mẫu đầu tiên vì tổng số bây giờ sẽ nhỏ hơn.
+
+Trong thống kê, Bootstrapping được xem như là một phương pháp giải quyết các bất định của bài toán thống kê mà không đòi hỏi các điều kiện ban đầu về phân phối xác suất.
+
+Phương pháp bootstrapping này đòi hỏi một lượng đáng kể sức mạnh tính toán, nhưng hầu hết các máy tính có thể dễ dàng xử lý rằng miễn là kích thước mẫu và lần lặp được giữ theo tỷ lệ hợp lý. Lợi ích chính là việc bootstrapping tiết kiệm rất nhiều thời gian trong giai đoạn tiến hành nghiên cứu khi quá khó khăn, tốn thời gian hoặc tốn kém để khảo sát toàn bộ tổng thể được xem xét. (2U, Inc., 2022)
+
+### 1.5.2. Ensemple sampling
+
+<div align = "justify">
+
+**Ensemple sampling** hiểu đơn giản là phương pháp kết hợp nhiều mô hình. Nó duy trì một tập hợp các mô hình hợp lý về mặt thống kê có thể được cập nhật theo cách gia tăng hiệu quả. Phân phối rời rạc tương ứng đại diện cho sự gần đúng của phân phối sau. Vào đầu của mỗi quá trình, một mô hình được lấy mẫu thống nhất từ nhóm và một hành động được chọn để tối vụ hoả phần mong đợi đối với mô hình được lấy mẫu. Mỗi mô hình ban đầu được lấy mẫu từ bản phân phối trước và phát triển thông qua một quá trình cập nhật thích ứng với các quan sát và nhiễu loạn ngẫu nhiên.
+
+### 1.5.3. Áp dụng vào mô hình cây quyết định
+
+<div align = "justify">
+
+Ensemble sampling và Bootstrapping sử dụng cùng mô hình cây quyết định thông qua mô hình rừng cây. Mô hình rừng cây được huấn luyện dựa trên sự phối hợp giữa Ensemble sampling và Bootstrapping. Cụ thể thuật toán này tạo ra nhiều cây quyết định mà mỗi cây quyết định được huấn luyện dựa trên nhiều mẫu con khác nhau và kết quả dự báo là bầu cử (voting) từ toàn bộ những cây quyết định.
+
+## 1.6. Kiểm chứng chéo (Cross validation)
+
+<div align = "justify">
+
+Khi hiệu suất của thuật toán trên tập huấn luyện tốt hơn nhiều so với hiệu suất trên tập thử nghiệm, khi đó mô hình được gọi là huấn luyện quá mức *over -- training*. Khi đó, cross validation là một giải pháp cho vấn đề này.
+
+Cross validation dựa trên việc phân chia ngẫu nhiên tập hợp các quan sát thành K nhóm hoặc nếp gấp, có kích thước xấp xỉ bằng nhau. Nếp gấp đầu tiên được coi là một tập xác thực và phương pháp phù hợp với các nếp gấp K - 1 còn lại.
+
+Các bước tiến hành:
+
+-   Bước 1: Chia dữ liệu thành K nhóm *(folds)* phân bố đều
+
+-   Bước 2: Chọn 1 nhóm làm tập kiểm tra *(test set)* và K-1 còn lại làm tập huấn luyện *(trai set)*
+
+-   Bước 3: Phát triển mô hình machine learning dựa trên tập huấn luyện
+
+-   Bước 4: So sánh giá trị dự đoán và giá trị thực trên tập kiểm tra
+
+-   Bước 5: Lặp lại K lần với mỗi lần thực hiện chọn một nhóm khác nhau làm tập kiểm tra
+
+-   Bước 6: Tính điểm trung bình (độ chính xác / sai số) qua K nhóm
+
+Lưu ý:
+
+-   Khi K = n, với n là kích thước của tập dữ liệu, như vậy mỗi nhóm sẽ được sử dụng để đánh giá mô hình một lần. Cách tiếp cận này còn có tên **leave-one-out cross validation**
+
+-   Các giá trị lớn hơn của K sẽ có thời gian tính toán chậm hơn nhiều: cross validation với 100 nhóm sẽ chậm hơn 10 lần so với cross validation với 10 nhóm
+
+-   Thực tế, người ta thường lựa chọn K = 5 hoặc K = 10
+
+------------------------------------------------------------------------
+
+# 2. Trực quan hóa dữ liệu
+
+## 2.1. Giới thiệu về bộ dữ liệu
+
+<div align = "justify">
+
+Một công ty bảo hiểm thực hiện một nghiên cứu để ước tính chi phí chăm sóc y tế của khách hàng trong năm tới. Dữ liệu thu thập được bao gồm 7 trường dữ liệu chứa thông tin liên quan đến 934 khách hàng được lưu trong file "insurance data.csv". Các cột dữ liệu bao gồm có:
+
+| STT | Tên biến | Loại       | Mô tả                                                                                                                                                |
+|--------------|--------------|--------------|-------------------------------|
+| 1   | age      | Định lượng | Tuổi của khách hàng                                                                                                                                  |
+| 2   | sex      | Định danh  | Giới tính của khách hàng (male: nam -- female: nữ)                                                                                                   |
+| 3   | bmi      | Định lượng | Chỉ số BMI của khách hàng. Chỉ số này cung cấp thước đo cơ bản về tỷ lệ cơ thể, được tính theo đơn vị ($kg/m^2$), tỷ lệ lý tưởng là từ 18,5 đến 24,9 |
+| 4   | children | Định lượng | Số lượng trẻ em được bảo hiểm cùng khách hàng (thẻ BHYT của một cha/mẹ thường bảo hiểm cho cả trẻ em)                                                |
+| 5   | smoker   | Định danh  | Khách hàng có hút thuốc hay không (Yes: Có -- No: không)                                                                                             |
+| 6   | region   | Định danh  | Nơi cư trú của khách (có 4 vùng)                                                                                                                     |
+| 7   | charges  | Định lượng | Tổng chi phí khám chữa bệnh trong vòng 1 năm của khách hàng. Đây là biến mục tiêu cần được nghiên cứu                                                |
+
+: Mô tả các biến trong tập dữ liệu
+
+## 2.2. Tiền xử lý dữ liệu
+
+<div align = "justify">
+
+Tập dữ liệu sử dụng không có giá trị bị thiếu (missing value). Với các biến định lượng, để phục vụ tốt cho việc trực quan hóa dữ liệu, chúng ta có thể làm sạch dữ liệu bằng các xem xét và loại bỏ các giá trị outliers.
+
+```{r, warning = FALSE, message = FALSE}
+box1 <-
+  ggplot(data, aes(charges)) + geom_boxplot() + xlab("charges") + coord_flip() + theme_bw() +
+  labs(title = "charges")
+
+box2 <-
+  ggplot(data, aes(bmi)) + geom_boxplot() + xlab("bmi") + coord_flip() + theme_bw() +
+  labs(title = "bmi")
+
+box3 <-
+  ggplot(data, aes(age)) + geom_boxplot() + xlab("age") + coord_flip() + theme_bw() +
+  labs(title = "age")
+
+box4 <-
+  ggplot(data, aes(children)) + geom_boxplot() + xlab("children") + coord_flip() + theme_bw() +
+  labs(title = "children")
+
+grid.arrange(box1, box2, box3, box4, ncol = 4)
+```
+
+```{r, warning = FALSE, message = FALSE}
+min1 <- quantile(data$charges, probs = 0.2) - 1.5 * IQR(data$charges)
+max1 <- quantile(data$charges, probs = 0.8) + 1.5 * IQR(data$charges)
+
+min2 <- quantile(data$bmi, probs = 0.2) - 1.5 * IQR(data$bmi)
+max2 <- quantile(data$bmi, probs = 0.8) + 1.5 * IQR(data$bmi)
+
+checkdata <- check_that(data, charges < max1, bmi < max2)
+
+summary(checkdata)
+
+barplot(checkdata[1:2], main = "Errors in charges and bmi")
+```
+
+<div align = "justify">
+
+Bằng việc vẽ biểu đồ boxplot và sử dụng các điều kiện để lọc ra giá trị ngoại lai, kết quả cho thấy: trong 4 biến định lượng trên chỉ có hai biến là **charges** và **bmi** có các giá trị khác lệch nhiều so với trung bình trong 934 quan sát trong mẫu. Vì vậy, để việc phân tích và báo cáo chính xác hơn, ta thực hiện thay các giá trị ngoại lai này bằng trung bình của từng biến. 
+
+```{r, warning = FALSE, message = FALSE}
+data$charges[data$charges > max1] <- mean(data$charges)
+data$bmi[data$bmi > max2] <- mean(data$bmi)
+```
+
+## 2.3. Thống kê mô tả
+
+<div align = "justify">
+
+Bảng sau cung cấp một số thống kê mô tả của 4 biến định lượng: **age**, **bmi**, **children** và **charges**
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+summary(data$age)
+summary(data$bmi)
+summary(data$children)
+summary(data$charges)
+
+table1 <- data.frame(
+  Numeric_variables = c("age", "bmi", "children", "charges"),
+  Min = c("18", "15.96", "0", "250000"),
+  Mean = c("39.21", "30.75", "1.094", "2947140"),
+  Max = c("64", "52.58", "5", "14029000"),
+  NAs = c("0", "0", "0", "0")
+)
+
+kbl(table1, caption = "Descriptive statistics of variables") %>%
+  row_spec(
+    row = 0,
+    bold = TRUE,
+    color = "black",
+    background = "#F9EBEA"
+  ) %>%
+  kable_styling(
+    bootstrap_options = "striped",
+    full_width = F,
+    position = "center"
+  )
+```
+
+<div align = "justify">
+
+Bảng dưới đây cho thấy thống kê mô tả của các biến định tính **sex**, **region** và **smoker** từ tập dữ liệu.
+
+```{r,  warning = FALSE, message = FALSE, echo = FALSE}
+dat1 <- data %>% group_by(sex) %>% 
+  summarise(counts = n()) %>%
+  mutate(Prob = round(counts * 100 / sum(counts), 1))
+
+datatable(
+  dat1,
+  rownames = FALSE,
+  colnames = c("Sex", "counts", "prob"),
+  caption = "Frequency Sex"
+)
+
+
+dat2 <- data %>% group_by(smoker) %>% 
+  summarise(counts = n()) %>%
+  mutate(Prob = round(counts * 100 / sum(counts), 1))
+
+datatable(
+  dat2,
+  rownames = FALSE,
+  colnames = c("Smoker", "counts", "prob"),
+  caption = "Frequency Smoker"
+)
+
+
+dat3 <- data %>% group_by(region) %>% 
+  summarise(counts = n()) %>%
+  mutate(Prob = round(counts * 100 / sum(counts), 1))
+
+datatable(
+  dat3,
+  rownames = FALSE,
+  colnames = c("Region", "counts", "prob"),
+  caption = "Frequency Region"
+)
+```
+
+## 2.4. Tiến hành trực quan hóa 
+
+### 2.4.1. Vẽ đồ thị hàm mật độ 
+
+```{r,  warning = FALSE, message = FALSE}
+ggplot(data, aes(charges, fill = sex)) +
+  geom_density(alpha = 0.7) + 
+  theme_bw() +
+  scale_fill_manual(values = c("#868686FF", "#B5350D")) +
+  labs(title = "Density of charges")
+```
+
+
+
+```{r,  warning = FALSE, message = FALSE}
+ggplot(data, aes(charges, fill = smoker)) +
+  geom_density(alpha = 0.7) + 
+  theme_bw() +
+  scale_fill_manual(values = c("#868686FF", "#B5350D")) +
+  labs(title = "Density of charges")
+```
+
+### 2.4.2. Mối quan hệ giữa các biến age, charges và region
+
+```{r}
+ggplot(data, aes(charges, region , col = sex)) +
+  geom_boxplot() + ylab("region") + xlab("charges") + labs(color = "sex: ") +
+  scale_color_manual(values = c("#2471A3", "#8E44AD")) +
+  theme_bw() +
+  coord_flip() +
+  labs(title = "Plot of region, charges based on sex")
+```
+
+Ở tất cả 4 vùng, chi phí khám chữa bệnh của nam lớn hơn chi phí khám chữa bệnh của nữ, bên cạnh đó, chi phí khám chữa bệnh cả nam và nữ ở vùng đông nam là cao nhất và tây bắc là thấp nhất.
+
+### 2.4.2. Mối quan hệ giữa các biến age, charges và smoker
+
+```{r,  warning = FALSE, message = FALSE}
+ggplot(data, aes(age, charges, col = factor(smoker))) +
+  geom_point() +
+  scale_color_manual(values = c(
+    "#A93226",
+    "#884EA0",
+    "#2471A3",
+    "#138D75",
+    "#D4AC0D",
+    "#BA4A00"
+  )) +
+  coord_flip() + ylab("charges") + xlab("age") +
+  theme_bw() +
+  labs(color = "smoker: ", title = "age, charges based on smoker")
+```
+
+<div align = "justify">
+
+Với tổng chi phí khám chữa bệnh trong khoảng 250,000 đến 3,500,000 đồng, ở nhóm người không hút thuốc lá, chi phí khám chữa bệnh tỉ lệ thuận với độ tuổi của khách hàng. Khách hàng có tuổi càng cao thì tổng chi phí này cũng càng lớn. Trái lại, những người hút thuốc lá, với độ tuổi càng tăng thì chi phí khám chữa bệnh vẫn giữ nguyên ở mức khoảng 2,250,000 và 3,000,000 đồng. Tuy nhiên mức chi phí này lớn hơn so với nhóm trước. Một bộ phận còn lại kể cả người hút thuốc và không hút thuốc, sở hữu tổng chi phí khám chữa bệnh lớn nhất, nằm trong khoảng từ 4,000,000 đến 6,000,000 đồng.
+
+------------------------------------------------------------------------
+
+# 3. Xây dựng mô hình
+
+<div align = "justify">
+
+Yêu cầu bài toán là xây dựng một mô hình dựa trên các biến trong tập dữ liệu để dự đoán chi phí khám chữa bệnh. Ở dây, biến **charges** sẽ là biến phụ thuộc và các biến còn lại sẽ là các biến độc lập. Ta sử dụng các thuật toán machine learning để xây dựng các mô hình khác nhau và lựa chọn mô hình tốt nhất để dự báo.
+
+Thực hiện chia tập dữ liệu thành hai tập train và test theo tỷ lệ 80% - 20%.
+
+```{r, warning = FALSE, message = FALSE}
+set.seed(1)
+test_index <-
+  createDataPartition(data$charges,
+                      times = 1,
+                      p = 0.2,
+                      list = FALSE)
+train <- data[-test_index, ]
+test <- data[test_index, ]
+```
+
+## 3.1. Sử dụng mô hình tuyến tính đơn giản
+
+<div align = "justify">
+
+Đôi khi một mô hình tuyến tính đơn giản với đầy đủ các biến có thể cho RMSE lớn hơn các mô hình ít biến hơn, do đó cần kiểm tra tất cả các mô hình tuyến tính có thể tạo được từ các biến độc lập.
+
+Do trong dữ liệu thu thập được có 6 biến ngoại sinh và 1 biến mục tiêu nên ta cần kiểm tra 2^6 mô hình để tìm ra mô hình có sai số dự báo (RMSE) nhỏ nhất. Dựa vào cross validation sẽ rút ngắn thời gian để tìm ra một mô hình có RMSE nhỏ nhất. 
+
+Thực hiện xây dựng hàm cross validation cho mô hình tuyến tính đơn giản: 
+
+```{r,  warning = FALSE, message = FALSE}
+Binary <- function(n) {
+  tg <- c()
+  if (n == 0) {tg <- c(0)} 
+  else 
+  {
+    k <- floor(log2(n)) + 1
+    for (i in 1:k)
+    {
+      if (n %% 2 == 0)
+      {
+        tg <- c(0, tg)
+        n <- n / 2
+      } 
+      else
+      {
+        tg <- c(1, tg)
+        n <- (n - 1) / 2
+      }
+    }
+  }
+  Binary <- as.logical(tg)
+}
+
+cv.lm <- function(dat, k, varname)
+{
+  set.seed(1)
+  ind <- which(names(dat) == varname)
+  y <- dat[, ind]
+  x <- dat[, -ind]
+  p <- dim(x)[2]
+  cv.cal <- rep(0, 2 ^ p - 1)
+  index<-createFolds(y,k)
+  
+  for (n in 1:(2^p-1))
+  {
+    v.s <- c(rep(FALSE, p - length(Binary(n))), Binary(n))
+    if (sum(v.s) == 1)
+    {
+      dat1 <- as.matrix(x[, v.s])
+      dat1 <- data.frame(dat1)
+      names(dat1) <- names(x)[v.s]
+    }
+    else {dat1 <- x[, v.s]}
+    
+    error <- rep(0, k)
+    
+    for (j in 1:k)
+    {
+      if (sum(v.s) == 1)
+      {
+        x.train <- as.matrix(dat1[-index[[j]], ])
+        x.train <- data.frame(x.train)
+        names(x.train) <- names(dat1)
+        
+        x.test <- as.matrix(dat1[index[[j]], ])
+        x.test <- data.frame(x.test)
+        names(x.test) <- names(dat1)
+      } 
+      
+      else
+      {
+        x.train <- dat1[-index[[j]], ]
+        x.test <- dat1[index[[j]], ]
+      }
+      
+      y.train <- y[-index[[j]]]
+      y.test <- y[index[[j]]]
+      
+      model <- lm(y.train ~ ., data = x.train)
+      pred <- predict(model, x.test)
+      error[j] <- sqrt(mean((pred - y.test) ^ 2))
+    }
+    cv.cal[n] <- mean(error)
+  }
+  
+  n <- which.min(cv.cal)
+  v.s <- c(rep(FALSE, p - length(Binary(n))), Binary(n))
+  
+  result <- list(min(cv.cal), names(x)[v.s])
+  names(result) <- c("cv.error", "variables")
+  cv.lm <- result
+}
+```
+
+<div align = "justify">
+
+Sau khi tạo hàm cross validation, ta thực hiện thuật toán trên bộ dữ liệu train với k-fold = 5. Kết quả thu được mô hình hồi quy tuyến tính đơn giản với hai biến độc lập **age** và **smoker** sẽ có RMSE nhỏ nhất.
+
+```{r, warning = FALSE, message = FALSE}
+train <- as.data.frame(train)
+cv.lm <- cv.lm(train, 5, "charges")
+cv.lm$cv.error                    #Trung binh sai so cua 5 phan
+cv.lm$variables
+```
+
+## 3.2. Sử dụng mô hình GAM
+
+```{r, warning = FALSE, message = FALSE}
+gam1 <- gam(
+  charges ~ s(bmi) + s(age) +
+    s(children) + age + I(age ^ 2) + bmi + I(bmi ^ 2) + factor(sex) + factor(smoker) + children + factor(region),
+  data = train
+)
+
+gam.pred <- predict(gam1, newdata = test)
+RMSE(gam.pred, test$charges)
+```
+
+<div align = "justify">
+
+### Nhận xét khả năng giải thích và khả năng dự đoán của các mô hình tuyến tính
+
+Nhìn chung, Về khả năng giải thích cho biến phụ thuộc, các mô hình tuyến tính giản đơn phân tích được rõ tác động của mỗi nhân tố đến biến **Charges**.
+
+Tuy nhiên, với các mô hình tuyến tính mở rộng phức tạp hơn, chẳng hạn **GAM**.... ta khó có thể đi sâu vào nghiên cứu, phân tích từng tác động đến biến phụ thuộc, điều này gây khó dễ cho việc khuyến nghị để giảm thiểu chi phí bảo hiểm, hay khó khăn hơn trong việc xem xét yếu tố nào làm gia tăng nhiều chi phí để từ đó tìm cách khắc phục và đề xuất giải pháp.
+
+Trong các mô hình tuyến tính và mô hình tuyến tính mở rộng trên, nhận thấy **GAM** cho kết quả dự báo tốt nhất với sai số RMSE nhỏ nhất. Đề xuất **GAM** để dự báo cho biến **Charges**.
+
+## 3.3. Sử dụng mô hình cây quyết định
+
+<div align = "justify">
+
+Xây dựng mô hình cây với từng biến và nhiều biến, ta thấy mô hình cây với tất cả các biến cho RMSE nhỏ nhất. 
+
+```{r, warning = FALSE, message = FALSE}
+tree1 = tree(
+  charges ~ factor(smoker) + factor(sex) + factor(region) + age + bmi + children,
+  data = train,
+  control = tree.control(
+    nobs = nrow(train),
+    mincut = 2,
+    minsize = 4,
+    mindev = 0.003
+  )
+)
+```
+
+<div align = "justify">
+
+Sử dụng phương pháp cross validation để tìm số lá thích hợp cho mô hình. Ta thấy mô hình có 21 lá là thích hợp nhất. 
+
+```{r, warning = FALSE, message = FALSE}
+set.seed(1)
+cv.tree.all = cv.tree(tree1, K = 5)
+l = cv.tree.all$size[which.min(cv.tree.all$dev)]
+l
+```
+
+<div align = "justify">
+
+Thực hiện xây dựng mô hình cây với số lá tối ưu. 
+
+```{r, warning = FALSE, message = FALSE}
+tree1 = prune.tree(tree1, best = l)
+plot(tree1)
+text(tree1, pretty = 0)
+tree1.pred = predict(tree1, test)
+RMSE(tree1.pred, test$charges)
+```
+
+## 3.4. Sử dụng mô hình rừng cây ngẫu nhiên (Random forest)
+
+<div align = "justify">
+
+**Random forest** là một thuật toán ensemble machine learning khác dựa trên kỹ thuật bagging. Nó là một phần mở rộng của thuật toán estimator bagging. Các công cụ ước tính cơ sở *(base estimator)* trong random forest là mô hình cây quyết định *(decision trees)*. Random forest chọn ngẫu nhiên một tập hợp các đặc điểm *(features)* được sử dụng để quyết định phân chia tốt nhất ở mỗi nút của mô hình cây quyết định. (Singh, 2018)
+
+Thuật toán được thực hiện như sau: (Singh, 2018)
+
+-   Bước 1: Chia tập dữ liệu gốc thành các tập con ngẫu nhiên
+
+-   Bước 2: Ở mỗi nút trong mô hình cây quyết định, chỉ có một tập hợp các đặc điểm ngẫu nhiên được xem xét để quyết định phân chia tốt nhất
+
+-   Bước 3: Một mô hình cây quyết định được trang bị trên mỗi tập hợp con
+
+-   Bước 4: Dự đoán cuối cùng được tính toán bằng cách lấy trung bình các dự đoán từ tất cả các mô hình cây quyết định
+
+```{r, warning = FALSE, message = FALSE}
+bag <-
+  randomForest(
+    charges ~ smoker + sex + region + age + bmi + children,
+    data = train,
+    mtry = 13,
+    importance = TRUE,
+    ntree = 200
+  )
+bag.pred <- predict(bag, newdata = test)
+RMSE(bag.pred, test$charges)
+```
+
+
+
+## 3.5. Sử dụng thuật toán Gradient Boosting (GBM)
+
+<div align = "justify">
+
+**Gradient Boosting** hay GBM là một thuật toán esemble machine learning khác sử dụng cho cả cả hai bài toán hồi quy và phân loại. GBM sử dụng kỹ thuật boosting, kết hợp một số mô hình học yếu *(weak leaners)* để tạo thành một mô hình học mạnh *(strong leaners)* (Singh, 2018). Nó thường sử dụng mô hình cây quyết định *(decision tree)* làm mô hình cơ sở *(base model)* (VTI, 2020), mỗi cây tiếp theo được xây dựng dựa trên các lỗi *(errors)* được tính toán bởi cây trước đó. (Singh, 2018)
+
+### Kỹ thuật boosting khác với random forest như thế nào?
+
+<div align = "justify">
+
+Trong thuật toán random forest nói riêng hay đối với kĩ thuật bagging nói chung, các mô hình đều được huấn luyện một cách riêng rẽ, không liên quan hay ảnh hưởng gì đến nhau, điều này trong một số trường hợp có thể dẫn đến kết quả tệ khi các mô hình được huấn luyện có thể cùng ra 1 kết quả. Chúng ta không thể kiểm soát được hướng phát triển của các mô hình con thêm vào bagging. Chúng ta mong đợi các mô hình yếu của thể hỗ trợ lẫn nhau, học được từ nhau để tránh đi vào các sai lầm của mô hình trước đó. Đây là điều bagging không làm được. Boosting ra đời dựa trên việc mong muốn cải thiện những hạn chế trên. Ý tưởng cơ bản là boosting sẽ tạo ra một loạt các mô hình yếu, học bổ sung lẫn nhau. Nói cách khác, trong boosting, các mô hình sau sẽ cố gắng học để hạn chế lỗi lầm của các mô hình trước.
+
+```{r, warning = FALSE, message = FALSE}
+boost.fit <- gbm(
+  charges ~ factor(smoker) + factor(region) + factor(sex) + bmi + children + age,
+  data = train,
+  n.trees = 5000,
+  interaction.depth = 5,
+  shrinkage = 0.002
+)
+boost.pred <- predict(boost.fit, newdata = test, n.trees = 5000)
+RMSE(boost.pred, test$charges)
+```
+### Nhận xét kết quả giữa mô hình cây quyết định và mô hình rừng ngẫu nhiên
+
+<div align = "justify">
+
+Lợi ích của một cây quyết định đơn giản là mô hình rất dễ diễn giải. Khi xây dựng cây quyết định, ta biết biến nào và giá trị nào mà biến sử dụng để phân chia dữ liệu, dự đoán kết quả một cách nhanh chóng. Mặt khác, các mô hình thuật toán rừng ngẫu nhiên phức tạp hơn vì chúng là sự kết hợp của cây quyết định. Khi xây dựng một mô hình thuật toán rừng ngẫu nhiên, chúng ta phải xác định có bao nhiêu cây để tạo ra và có bao nhiêu biến cần thiết cho mỗi nút.
+
+Nói chung, nhiều cây sẽ cải thiện hiệu suất và làm cho dự đoán ổn định hơn nhưng cũng làm chậm tốc độ tính toán. Đối với các bài toán hồi quy, trung bình của tất cả các cây được coi là kết quả cuối cùng. Không giống như hồi quy tuyến tính, mô hình rừng ngẫu nhiên sử dụng các quan sát hiện có để ước tính các giá trị bên ngoài phạm vi quan sát được.
+
+------------------------------------------------------------------------
+
+# 4. Tổng kết
+
+<div align = "justify">
+
+Sau khi thực hiện xây dựng mô hình để dự báo chi phí khám chữa bệnh bằng nhiều phương pháp, ta thấy mô hình rừng cây ngẫu nhiên (random forest) có sai số dự báo RMSE trên tập huấn luyện mô hình (test set) đạt nhỏ nhất. Vậy lựa chọn mô hình này để dự báo.
+
+```{r, warning = FALSE, message = FALSE}
+bag.pred.final <- predict(bag, newdata = test.final)
+bag.pred.final
+```
+
+------------------------------------------------------------------------
+
+# Tài liệu tham khảo
+
+<div align="left">
+
+**1.** 2U, Inc. (2022). *What Is Bootstrapping?* Được truy lục từ Master's In Data Science: <https://www.mastersindatascience.org/learning/introduction-to-machine-learning-algorithms/bootstrapping/>
+
+**2.** Aparicio, M., & Costa, C. J. (2015). Data Visualization. *Communication design quarterly review, 3*(1), 7-11.
+
+**3.** Cuong, S. (2020, 08 23). *Phương pháp Ensemble Learning trong Machine Learning: Boosting, Bagging, Stacking (Sử dụng R code)*. Được truy lục từ Khoa Học Dữ Liệu: <https://svcuong.github.io/post/ensemble-learning/>
+
+**4.** Chen, C.-h., Härdle, W. K., & Uwin, A. (2007). *Handbook of Data Visualization* (Editors ed.). Springer Science & Business Media.
+
+**5.** Hoàng, P. M. (2020, 01 17). *Ensemble learning và các biến thể (P1)*. Được truy lục từ VIBLO: <https://viblo.asia/p/ensemble-learning-va-cac-bien-the-p1-WAyK80AkKxX>
+
+**6.** Joshi, P. (2020, 02 12). *What is Bootstrap Sampling in Statistics and Machine Learning?* Được truy lục từ Analytics Vidhya: <https://www.analyticsvidhya.com/blog/2020/02/what-is-bootstrap-sampling-in-statistics-and-machine-learning/>
+
+**7.** Kate, B. (2020, 02). *data visualization*. Retrieved from TechTarget: <https://www.techtarget.com/searchbusinessanalytics/definition/data-visualization>
+
+**8.** Singh, A. (2018, 06 18). *A Comprehensive Guide to Ensemble Learning (with Python codes)*. Được truy lục từ Analytics Vidhya: <https://www.analyticsvidhya.com/blog/2018/06/comprehensive-guide-for-ensemble-models/>
+
+**9.** VTI. (2020, 10 13). *XGBoost -- Bài 1: Toàn cảnh về Ensemble Learning -- Phần 1*. Được truy lục từ VTI TechBlog!: <https://vtitech.vn/xgboost-bai-1-toan-canh-ve-ensemble-learning-phan-1/>
+
+**10.** VTI. (2020, 10 18). *XGBoost -- Bài 2: Toàn cảnh về Ensemble Learning -- Phần 2*. Được truy lục từ VTI TechBlog!: <https://vtitech.vn/xgboost-bai-2-toan-canh-ve-ensemble-learning-phan-2/>
